@@ -1,0 +1,9 @@
+[package]
+name = "pastebin"
+version = "0.1.0"
+authors = ["Edgar Albalate <dev.gardo@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rocket = "0.4.0"
+rand = "0.6"
