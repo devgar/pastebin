@@ -27,6 +27,12 @@ fn index() -> &'static str {
       GET /<id>
 
           retrieves the content for the paste with id `<id>`
+
+      DELETE /<id>
+
+          deletes the paste identified with id `<id>`
+
+    © 2019 Edgar Albalate <dev.gardo@gmail.com> 
     "
 }
 
@@ -46,7 +52,14 @@ fn retrieve(id: PasteID) -> Option<File> {
     File::open(&filename).ok()
 }
 
+#[delete("/<id>")]
+fn delete(id: PasteID) -> io::Result<String> {
+    let filename = format!("upload/{}", id);
+    std::fs::remove_file(filename)?;
+    Ok(format!("File `{}` deleted.\n", id))
+}
+
 
 fn main() {
-    rocket::ignite().mount("/", routes![index, upload, retrieve]).launch();
+    rocket::ignite().mount("/", routes![index, upload, retrieve, delete]).launch();
 }
