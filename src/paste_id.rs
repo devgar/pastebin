@@ -8,10 +8,14 @@ use rand::{self, Rng};
 
 /// Returns `true` if `id` is a valid paste ID and `false` otherwise.
 fn valid_id(id: &str) -> bool {
-    id.chars().all(|c| {
-        (c >= 'a' && c <= 'z')
-            || (c >= 'A' && c <= 'Z')
-            || (c >= '0' && c <= '9')
+    !id.starts_with('.') 
+    && !id.starts_with('-') 
+    && !id.starts_with('_')
+    && id.chars().all(|c| {
+        c == '.' || c == '-' || c == '_'
+        || (c >= 'a' && c <= 'z')
+        || (c >= 'A' && c <= 'Z')
+        || (c >= '0' && c <= '9')
     })
 }
 

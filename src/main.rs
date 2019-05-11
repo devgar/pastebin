@@ -59,7 +59,17 @@ fn delete(id: PasteID) -> io::Result<String> {
     Ok(format!("File `{}` deleted.\n", id))
 }
 
+#[put("/<id>", data = "<paste>")]
+fn put(id: PasteID, paste: Data) -> io::Result<String> {
+    let filename = format!("upload/{}", id);
+    let url = format!("{}/{}\n", "http://localhost:8000", id);
+    paste.stream_to_file(Path::new(&filename))?;
+    Ok(url)
+}
+
 
 fn main() {
-    rocket::ignite().mount("/", routes![index, upload, retrieve, delete]).launch();
+    rocket::ignite().mount("/", routes![
+        index, upload, retrieve, delete, put
+    ]).launch();
 }
