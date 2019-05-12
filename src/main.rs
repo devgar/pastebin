@@ -1,17 +1,22 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
+use rocket::Data;
+use rocket::response::content;
+
 extern crate rand;
 
-mod paste_id;
+extern crate syntect;
+use syntect::parsing::SyntaxSet;
+use syntect::highlighting::{Color, ThemeSet};
+use syntect::html::highlighted_html_for_file;
 
+mod paste_id;
 use paste_id::PasteID;
+
 
 use std::io;
 use std::path::Path;
-
-use rocket::Data;
-
 use std::fs::File;
 
 #[get("/")]
@@ -52,6 +57,25 @@ fn retrieve(id: PasteID) -> Option<File> {
     File::open(&filename).ok()
 }
 
+#[get("/<id>?syntax")]
+fn retrieve_syntaxed(id: PasteID) -> content::Html<String>{
+    let filename = format!("upload/{id}", id = id);
+    let ss = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+    let style = "
+        pre {
+            font-size:13px;
+            font-family: Consolas, \"Liberation Mono\", Menlo, Courier, monospace;
+        }";
+    let head = format!("<head><title>{}</title><style>{}</style></head>", id, style);
+    let theme = &ts.themes["base16-ocean.dark"];
+    let c = theme.settings.background.unwrap_or(Color::WHITE);
+    let body = format!("<body style=\"background-color:#{:02x}{:02x}{:02x};\">\n", c.r, c.g, c.b);
+    let code = highlighted_html_for_file(filename, &ss, theme).unwrap();
+    let html: String = format!("<html>{}\n{}{}</body></html>", head, body, code);
+    content::Html(html)
+}
+
 #[delete("/<id>")]
 fn delete(id: PasteID) -> io::Result<String> {
     let filename = format!("upload/{}", id);
@@ -70,6 +94,6 @@ fn put(id: PasteID, paste: Data) -> io::Result<String> {
 
 fn main() {
     rocket::ignite().mount("/", routes![
-        index, upload, retrieve, delete, put
+        index, upload, retrieve, delete, put, retrieve_syntaxed
     ]).launch();
 }
