@@ -14,6 +14,8 @@ use syntect::html::highlighted_html_for_file;
 mod paste_id;
 use paste_id::PasteID;
 
+mod lang;
+use lang::Lang;
 
 use std::io;
 use std::path::Path;
@@ -57,8 +59,24 @@ fn retrieve(id: PasteID) -> Option<File> {
     File::open(&filename).ok()
 }
 
-#[get("/<id>?syntax")]
-fn retrieve_syntaxed(id: PasteID) -> content::Html<String>{
+
+#[delete("/<id>")]
+fn delete(id: PasteID) -> io::Result<String> {
+    let filename = format!("upload/{}", id);
+    std::fs::remove_file(filename)?;
+    Ok(format!("File `{}` deleted.\n", id))
+}
+
+#[put("/<id>", data = "<paste>")]
+fn put(id: PasteID, paste: Data) -> io::Result<String> {
+    let filename = format!("upload/{}", id);
+    let url = format!("{}/{}\n", "http://localhost:8000", id);
+    paste.stream_to_file(Path::new(&filename))?;
+    Ok(url)
+}
+
+#[get("/<id>/<lang>")]
+fn retrieve_syntaxed(id: PasteID, lang: Lang) -> content::Html<String>{
     let filename = format!("upload/{id}", id = id);
     let ss = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
@@ -76,24 +94,13 @@ fn retrieve_syntaxed(id: PasteID) -> content::Html<String>{
     content::Html(html)
 }
 
-#[delete("/<id>")]
-fn delete(id: PasteID) -> io::Result<String> {
-    let filename = format!("upload/{}", id);
-    std::fs::remove_file(filename)?;
-    Ok(format!("File `{}` deleted.\n", id))
-}
-
-#[put("/<id>", data = "<paste>")]
-fn put(id: PasteID, paste: Data) -> io::Result<String> {
-    let filename = format!("upload/{}", id);
-    let url = format!("{}/{}\n", "http://localhost:8000", id);
-    paste.stream_to_file(Path::new(&filename))?;
-    Ok(url)
-}
-
-
 fn main() {
     rocket::ignite().mount("/", routes![
-        index, upload, retrieve, delete, put, retrieve_syntaxed
+        // ROUTE /
+        index, upload,
+        // ROUTE /<id>
+        retrieve, delete, put,
+        // ROUTE /<id>/<lang>
+        retrieve_syntaxed
     ]).launch();
 }
