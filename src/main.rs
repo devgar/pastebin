@@ -87,7 +87,7 @@ fn put(id: PasteID, paste: Data) -> io::Result<String> {
 }
 
 #[get("/<id>/<lang>")]
-fn retrieve_syntaxed(id: PasteID, lang: Lang, h: State<Highlight>) -> ontent::Html<String> {
+fn retrieve_syntaxed(id: PasteID, lang: Lang, h: State<Highlight>) -> content::Html<String> {
     let filename = format!("upload/{id}", id = id);
     let head = format!("<head><title>{} - {}</title><style>{}</style></head>", id, lang, STYLE);
     let body = format!("<body style=\"background-color:#{:02x}{:02x}{:02x};\">\n", h.r, h.g, h.b);
