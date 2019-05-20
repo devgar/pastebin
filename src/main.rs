@@ -1,14 +1,14 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use] extern crate rocket;
-use rocket::Data;
+use rocket::{Data, State};
 use rocket::response::content;
 
 extern crate rand;
 
 extern crate syntect;
 use syntect::parsing::SyntaxSet;
-use syntect::highlighting::{Color, ThemeSet};
+use syntect::highlighting::{Color, ThemeSet, Theme};
 use syntect::html::highlighted_html_for_file;
 
 mod paste_id;
@@ -20,6 +20,18 @@ use lang::Lang;
 use std::io;
 use std::path::Path;
 use std::fs::File;
+
+struct Highlight {
+    ss: SyntaxSet,
+    theme: Theme,
+    r: u8, g: u8, b:u8
+}
+
+static STYLE: &'static str = "
+    pre {
+        font-size:13px;
+        font-family: Consolas, \"Liberation Mono\", Menlo, Courier, monospace;
+    }";
 
 #[get("/")]
 fn index() -> &'static str {
@@ -59,7 +71,6 @@ fn retrieve(id: PasteID) -> Option<File> {
     File::open(&filename).ok()
 }
 
-
 #[delete("/<id>")]
 fn delete(id: PasteID) -> io::Result<String> {
     let filename = format!("upload/{}", id);
@@ -76,26 +87,26 @@ fn put(id: PasteID, paste: Data) -> io::Result<String> {
 }
 
 #[get("/<id>/<lang>")]
-fn retrieve_syntaxed(id: PasteID, lang: Lang) -> content::Html<String>{
+fn retrieve_syntaxed(id: PasteID, lang: Lang, h: State<Highlight>) -> ontent::Html<String> {
     let filename = format!("upload/{id}", id = id);
-    let ss = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-    let style = "
-        pre {
-            font-size:13px;
-            font-family: Consolas, \"Liberation Mono\", Menlo, Courier, monospace;
-        }";
-    let head = format!("<head><title>{}</title><style>{}</style></head>", id, style);
-    let theme = &ts.themes["base16-ocean.dark"];
-    let c = theme.settings.background.unwrap_or(Color::WHITE);
-    let body = format!("<body style=\"background-color:#{:02x}{:02x}{:02x};\">\n", c.r, c.g, c.b);
-    let code = highlighted_html_for_file(filename, &ss, theme).unwrap();
-    let html: String = format!("<html>{}\n{}{}</body></html>", head, body, code);
-    content::Html(html)
+    let head = format!("<head><title>{} - {}</title><style>{}</style></head>", id, lang, STYLE);
+    let body = format!("<body style=\"background-color:#{:02x}{:02x}{:02x};\">\n", h.r, h.g, h.b);
+    let code = highlighted_html_for_file(filename, &h.ss, &h.theme).unwrap();
+    content::Html(format!("<html>{}\n{}{}</body></html>", head, body, code))
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![
+    let ss = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+    let theme = ts.themes["base16-ocean.dark"].clone();
+    let c = theme.settings.background.unwrap_or(Color::WHITE);
+    rocket::ignite()
+    .manage(Highlight {
+        ss: ss,
+        theme: theme,
+        r: c.r, g: c.g, b: c.b
+    })
+    .mount("/", routes![
         // ROUTE /
         index, upload,
         // ROUTE /<id>
