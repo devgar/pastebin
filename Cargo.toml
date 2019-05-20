@@ -5,6 +5,6 @@ authors = ["Edgar Albalate <dev.gardo@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-rocket = "0.4.0"
+rocket = "0.4.1"
 rand = "0.6"
 syntect = "3.2.0"
